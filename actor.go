@@ -18,6 +18,12 @@
 
 package actor
 
+import (
+	"reflect"
+
+	"code.google.com/p/gogoprotobuf/proto"
+)
+
 type EventHandler func(event *Event)
 
 type MessageHandler func(from string, message proto.Message)
@@ -25,8 +31,8 @@ type MessageHandler func(from string, message proto.Message)
 // Actor defines an actor.
 type Actor struct {
 	Self                   string // Self host:port
-	encodeQueue            chan *message
-	sendQeue               chan *message
+	encodeQueue            chan *Message
+	sendQeue               chan *Message
 	installedMessages      map[int]reflect.Type
 	installedHandlers      map[int]MessageHandler
 	installedEventHandlers map[int]EventHandler
@@ -39,11 +45,11 @@ func (a *Actor) Start(self string) error {
 func (a *Actor) Stop() {
 }
 
-func (a *Actor) Install(event *Event, handler EventHandler) error {
+func (a *Actor) InstallEvent(event *Event, handler EventHandler) error {
 	return nil
 }
 
-func (a *Actor) Install(message proto.Message, handler MessageHandler) error {
+func (a *Actor) InstallMessage(message proto.Message, handler MessageHandler) error {
 	return nil
 }
 

@@ -18,20 +18,31 @@
 
 package actor
 
-type UDPTransport struct {
+import (
+	"fmt"
+)
+
+type Transporter interface {
+	NewTransporter(hostport string) error
+	Stop()
+	Send(msg *Message) error
+	Recv() *Message
 }
 
-func (tr *UDPTransport) Start() error {
-	return nil
+type TransporterConfig struct {
+	Hostport     string
+	SendRoutines int
+	RecvRoutines int
 }
 
-func (tr *UDPTransport) Stop() {
+func MakeDefaultTransporterConfig(hostport string) *TransporterConfig {
+	return &TransporterConfig{
+		Hostport:     hostport,
+		SendRoutines: 1,
+		RecvRoutines: 1,
+	}
 }
 
-func (tr *UDPTransport) Send(msg *Message) error {
-	return nil
-}
-
-func (tr *UDPTransport) Recv() *Message {
-	return nil
+func (tc *TransporterConfig) String() {
+	fmt.Sprintf("TransporterConfig:\nHostport:%s\nSendRoutines:%d\nRecvRoutines:%d\n", tc.Hostport, tc.SendRoutines, tc.RecvRoutines)
 }
