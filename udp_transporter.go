@@ -41,8 +41,8 @@ type UDPTransporter struct {
 	pool *sync.Pool
 }
 
-// NewTransporter creates and starts the transporter
-func NewTransporter(config *TransporterConfig) *UDPTransporter {
+// NewUDPTransporter creates and starts the transporter
+func NewUDPTransporter(config *TransporterConfig) *UDPTransporter {
 	addr, err := net.ResolveUDPAddr("tcp", config.Hostport)
 	if err != nil {
 		log.Errorf("Failed to resolve UDP address: %v\n", err)
@@ -54,15 +54,13 @@ func NewTransporter(config *TransporterConfig) *UDPTransporter {
 		return nil
 	}
 	tr := &UDPTransporter{
-		config: config,
-		addr:   addr,
-		conn:   conn,
-
+		config:    config,
+		addr:      addr,
+		conn:      conn,
 		sendQueue: make(chan *Message, defaultQueueSize),
 		recvQueue: make(chan *Message, defaultQueueSize),
-
-		stop: make(chan struct{}),
-		pool: &sync.Pool{New: makeUDPBufferFunc},
+		stop:      make(chan struct{}),
+		pool:      &sync.Pool{New: makeUDPBufferFunc},
 	}
 	for i := 0; i < config.SendRoutines; i++ {
 		go tr.sendLoop()

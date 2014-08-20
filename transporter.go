@@ -23,7 +23,6 @@ import (
 )
 
 type Transporter interface {
-	NewTransporter(hostport string) error
 	Stop()
 	Send(msg *Message) error
 	Recv() *Message
