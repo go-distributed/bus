@@ -25,14 +25,13 @@ import (
 	log "github.com/golang/glog"
 )
 
-const (
-	defaultQueueSize = 1024
-)
-
+// UDPTransporter implements the Transporter interfaces using
+// UDP communication.
 type UDPTransporter struct {
-	config *TransporterConfig
-	addr   *net.UDPAddr
-	conn   *net.UDPConn
+	config *Config
+
+	addr *net.UDPAddr
+	conn *net.UDPConn
 
 	sendQueue chan *Message
 	recvQueue chan *Message
@@ -42,7 +41,7 @@ type UDPTransporter struct {
 }
 
 // NewUDPTransporter creates and starts the transporter
-func NewUDPTransporter(config *TransporterConfig) *UDPTransporter {
+func NewUDPTransporter(config *Config) *UDPTransporter {
 	addr, err := net.ResolveUDPAddr("tcp", config.Hostport)
 	if err != nil {
 		log.Errorf("Failed to resolve UDP address: %v\n", err)
@@ -71,10 +70,13 @@ func NewUDPTransporter(config *TransporterConfig) *UDPTransporter {
 	return tr
 }
 
+// makeUDPBufferFunc creates empty UDP payload buffer.
+// It is used by sync.Pool.
 func makeUDPBufferFunc() interface{} {
 	return make([]byte, 64*1024)
 }
 
+// sendLoop runs forever until the transporter is shutdown.
 func (tr *UDPTransporter) sendLoop() {
 	for {
 		select {
@@ -86,16 +88,7 @@ func (tr *UDPTransporter) sendLoop() {
 	}
 }
 
-func (tr *UDPTransporter) writeUDP(msg *Message) {
-	n, err := tr.conn.WriteTo(msg.Payload, msg.Addr)
-	if err != nil {
-		log.Warningf("Failed to write to UDP: %v\n", err)
-	}
-	if n != len(msg.Payload) {
-		log.Warningf("Partitial write: %v of %v bytes\n", n, len(msg.Payload))
-	}
-}
-
+// recvLoop runs forever until the transporter is shutdown.
 func (tr *UDPTransporter) recvLoop() {
 	for {
 		select {
@@ -107,6 +100,20 @@ func (tr *UDPTransporter) recvLoop() {
 	}
 }
 
+// writeUDP sends a single UDP packet, using the message's Payload as
+// the packet's payload.
+func (tr *UDPTransporter) writeUDP(msg *Message) {
+	n, err := tr.conn.WriteTo(msg.Payload, msg.Addr)
+	if err != nil {
+		log.Warningf("Failed to write to UDP: %v\n", err)
+	}
+	if n != len(msg.Payload) {
+		log.Warningf("Partitial write: %d of %d bytes\n", n, len(msg.Payload))
+	}
+}
+
+// readUDP read a single UDP packet, and fill the message's Payload with
+// the bytes it reads.
 func (tr *UDPTransporter) readUDP() {
 	b := tr.pool.Get().([]byte)
 	defer tr.pool.Put(b)
@@ -119,20 +126,24 @@ func (tr *UDPTransporter) readUDP() {
 		Addr:    addr,
 		Payload: make([]byte, n),
 	}
-	if nn := copy(msg.Payload, b[0:n]); nn < n {
-		log.Warningf("Partitial copy: %v of %v bytes\n", nn, n)
+	if nn := copy(msg.Payload, b[0:n]); nn != n {
+		log.Warningf("Partitial copy: %d of %d bytes\n", nn, n)
 	}
 }
 
-func (tr *UDPTransporter) Stop() {
-	tr.conn.Close()
-	close(tr.stop)
-}
-
+// Send puts a message in the sendQueue.
 func (tr *UDPTransporter) Send(msg *Message) {
 	tr.sendQueue <- msg
 }
 
+// Recv tries to get a message from the recvQueue, it will block if
+// there is no messages available now.
 func (tr *UDPTransporter) Recv() *Message {
 	return <-tr.recvQueue
+}
+
+// Shutdown shuts down the transporter.
+func (tr *UDPTransporter) Shutdown() {
+	tr.conn.Close()
+	close(tr.stop)
 }

@@ -18,30 +18,11 @@
 
 package actor
 
-import (
-	"fmt"
-)
-
+// Transporter defines the interfaces of a transporter.
+// Note: The NewTransporter() func is not defined in the interface,
+// but we expect it to create a transporter and start it.
 type Transporter interface {
-	Stop()
-	Send(msg *Message) error
+	Send(msg *Message)
 	Recv() *Message
-}
-
-type TransporterConfig struct {
-	Hostport     string
-	SendRoutines int
-	RecvRoutines int
-}
-
-func MakeDefaultTransporterConfig(hostport string) *TransporterConfig {
-	return &TransporterConfig{
-		Hostport:     hostport,
-		SendRoutines: 1,
-		RecvRoutines: 1,
-	}
-}
-
-func (tc *TransporterConfig) String() {
-	fmt.Sprintf("TransporterConfig:\nHostport:%s\nSendRoutines:%d\nRecvRoutines:%d\n", tc.Hostport, tc.SendRoutines, tc.RecvRoutines)
+	Shutdown()
 }

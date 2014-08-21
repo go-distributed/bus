@@ -19,15 +19,31 @@
 package actor
 
 import (
-	"net"
-
-	"code.google.com/p/gogoprotobuf/proto"
+	"fmt"
 )
 
-// Message defines a mesage.
-type Message struct {
-	Mtype   uint8
-	Addr    net.Addr // From or To address
-	Msg     proto.Message
-	Payload []byte
+// Config is used to store configs for the actor components.
+type Config struct {
+	Hostport       string
+	SendRoutines   int
+	RecvRoutines   int
+	EncodeRoutines int
+	DecodeRoutines int
+}
+
+// MakeDefaultConfig creates a default config, with the number
+// of all routines set to 1.
+func MakeDefaultConfig(hostport string) *Config {
+	return &Config{
+		Hostport:       hostport,
+		SendRoutines:   1,
+		RecvRoutines:   1,
+		EncodeRoutines: 1,
+		DecodeRoutines: 1,
+	}
+}
+
+// String is implemented to print the config.
+func (c *Config) String() string {
+	return fmt.Sprintf("Config:\nHostport:%s\nSendRoutines:%d\nRecvRoutines:%d\n", c.Hostport, c.SendRoutines, c.RecvRoutines)
 }

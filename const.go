@@ -18,16 +18,7 @@
 
 package actor
 
-import (
-	"net"
-
-	"code.google.com/p/gogoprotobuf/proto"
+// This file includes constants used in the package.
+const (
+	defaultQueueSize = 1024
 )
-
-// Message defines a mesage.
-type Message struct {
-	Mtype   uint8
-	Addr    net.Addr // From or To address
-	Msg     proto.Message
-	Payload []byte
-}
