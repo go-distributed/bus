@@ -24,22 +24,18 @@ import (
 
 // Config is used to store configs for the actor components.
 type Config struct {
-	Hostport       string
-	SendRoutines   int
-	RecvRoutines   int
-	EncodeRoutines int
-	DecodeRoutines int
+	Hostport     string
+	SendRoutines int
+	RecvRoutines int
 }
 
 // MakeDefaultConfig creates a default config, with the number
 // of all routines set to 1.
 func MakeDefaultConfig(hostport string) *Config {
 	return &Config{
-		Hostport:       hostport,
-		SendRoutines:   1,
-		RecvRoutines:   1,
-		EncodeRoutines: 1,
-		DecodeRoutines: 1,
+		Hostport:     hostport,
+		SendRoutines: 1,
+		RecvRoutines: 1,
 	}
 }
 

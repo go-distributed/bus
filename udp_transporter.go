@@ -103,7 +103,12 @@ func (tr *UDPTransporter) recvLoop() {
 // writeUDP sends a single UDP packet, using the message's Payload as
 // the packet's payload.
 func (tr *UDPTransporter) writeUDP(msg *Message) {
-	n, err := tr.conn.WriteTo(msg.Payload, msg.Addr)
+	addr, err := net.ResolveUDPAddr("udp", msg.Addr)
+	if err != nil {
+		log.Warningf("Failed to resolve UDP address: %v\n", err)
+		return
+	}
+	n, err := tr.conn.WriteToUDP(msg.Payload, addr)
 	if err != nil {
 		log.Warningf("Failed to write to UDP: %v\n", err)
 	}
@@ -117,13 +122,13 @@ func (tr *UDPTransporter) writeUDP(msg *Message) {
 func (tr *UDPTransporter) readUDP() {
 	b := tr.pool.Get().([]byte)
 	defer tr.pool.Put(b)
-	n, addr, err := tr.conn.ReadFrom(b)
+	n, addr, err := tr.conn.ReadFromUDP(b)
 	if err != nil {
 		log.Warningf("Failed to read from UDP: %v\n", err)
 		return
 	}
 	msg := &Message{
-		Addr:    addr,
+		Addr:    addr.String(),
 		Payload: make([]byte, n),
 	}
 	if nn := copy(msg.Payload, b[0:n]); nn != n {

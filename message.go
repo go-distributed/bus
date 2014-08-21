@@ -19,15 +19,13 @@
 package actor
 
 import (
-	"net"
-
 	"code.google.com/p/gogoprotobuf/proto"
 )
 
 // Message defines a mesage.
 type Message struct {
 	Mtype   uint8
-	Addr    net.Addr // From or To address
+	Addr    string // From or To address
 	Msg     proto.Message
 	Payload []byte
 }

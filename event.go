@@ -26,7 +26,7 @@ type Response struct {
 
 // Event defines an event.
 type Event struct {
-	Etype int
+	Etype uint8
 	Req   interface{}
 	Res   chan *Response
 }
