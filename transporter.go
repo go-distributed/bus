@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package actor
+package bus
 
 // Transporter defines the interfaces of a transporter.
 // Note: The NewTransporter() func is not defined in the interface,

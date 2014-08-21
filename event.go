@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package actor
+package bus
 
 // Response contains a response and an error (if there is any errors).
 type Response struct {

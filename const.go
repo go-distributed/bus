@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package actor
+package bus
 
 // This file includes constants used in the package.
 const (

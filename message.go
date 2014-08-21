@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package actor
+package bus
 
 import (
 	"code.google.com/p/gogoprotobuf/proto"

@@ -1,8 +1,6 @@
-actor
+bus
 =====
 
-Actor acts on incoming messages and events
+bus dispatches incoming messages and events to their handlers.
 
-[![GoDoc] (https://godoc.org/github.com/go-distributed/actor?status.png)](https://godoc.org/github.com/go-distributed/actor)
-
-This is a super simple actor, it's not meant to be akka or erlang.
+[![GoDoc] (https://godoc.org/github.com/go-distributed/bus?status.png)](https://godoc.org/github.com/go-distributed/bus)

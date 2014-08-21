@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package actor
+package bus
 
 import (
 	"fmt"
@@ -35,8 +35,8 @@ type MessageHandler func(from string, message proto.Message)
 // takes is the event itself.
 type EventHandler func(event *Event)
 
-// ActorInterface defines the interface of a messenger.
-type ActorInterface interface {
+// BusInterface defines the interface of a bus.
+type BusInterface interface {
 	InstallMessage(msg proto.Message, handler MessageHandler) error
 	InstallEvent(event *Event, handler EventHandler) error
 	Send(to string, msg proto.Message)
@@ -44,8 +44,8 @@ type ActorInterface interface {
 	Shutdown()
 }
 
-// Actor implements the ActorInterface.
-type Actor struct {
+// Bus implements the BusInterface.
+type Bus struct {
 	config *Config
 	tr     Transporter
 	stop   chan struct{}
@@ -60,10 +60,10 @@ type Actor struct {
 	eventQueue chan *Event
 }
 
-// NewActor creates and starts a new messenger using the giving config.
+// NewBus creates and starts a new bus using the giving config.
 // It also creates and starts the underlying transporter.
-func NewActor(config *Config) *Actor {
-	a := &Actor{
+func NewBus(config *Config) *Bus {
+	b := &Bus{
 		config:             config,
 		stop:               make(chan struct{}),
 		messageNameToMtype: make(map[string]uint8),
@@ -79,16 +79,16 @@ func NewActor(config *Config) *Actor {
 		log.Errorf("Failed to start transporter\n")
 		return nil
 	}
-	a.tr = tr
-	go a.encodeLoop()
-	go a.decodeLoop()
-	go a.eventLoop()
-	return a
+	b.tr = tr
+	go b.encodeLoop()
+	go b.decodeLoop()
+	go b.eventLoop()
+	return b
 }
 
 // InstallMessage installs the message with the giving message handler.
 // It returns an error if the message is already installed or the message is invalid.
-func (a *Actor) InstallMessage(msg proto.Message, handler MessageHandler) error {
+func (b *Bus) InstallMessage(msg proto.Message, handler MessageHandler) error {
 	rtype := reflect.TypeOf(msg)
 	if rtype.Kind() != reflect.Ptr {
 		err := fmt.Errorf("Message %v is not a Ptr type", rtype)
@@ -96,80 +96,80 @@ func (a *Actor) InstallMessage(msg proto.Message, handler MessageHandler) error 
 		return err
 	}
 	name := rtype.Elem().Name()
-	if _, ok := a.messageNameToMtype[name]; ok {
+	if _, ok := b.messageNameToMtype[name]; ok {
 		err := fmt.Errorf("Message %v is already installed", name)
 		log.Errorf("Failed to install message: %v\n", err)
 		return err
 	}
-	mtype := uint8(len(a.messageNameToMtype))
-	a.messageNameToMtype[name] = mtype
-	a.messageType[mtype] = rtype
-	a.messageHandler[mtype] = handler
+	mtype := uint8(len(b.messageNameToMtype))
+	b.messageNameToMtype[name] = mtype
+	b.messageType[mtype] = rtype
+	b.messageHandler[mtype] = handler
 	return nil
 }
 
 // InstallEvent installs the event with the giving handler.
 // It returns an error if the event is already installed.
-func (a *Actor) InstallEvent(event *Event, handler EventHandler) error {
-	if _, ok := a.eventHandler[event.Etype]; ok {
+func (b *Bus) InstallEvent(event *Event, handler EventHandler) error {
+	if _, ok := b.eventHandler[event.Etype]; ok {
 		err := fmt.Errorf("Event %v is already installed", event.Etype)
 		log.Errorf("Failed to install event: %v\n", err)
 		return err
 	}
-	a.eventHandler[event.Etype] = handler
+	b.eventHandler[event.Etype] = handler
 	return nil
 }
 
 // Send puts a message in the sendQueue.
-func (a *Actor) Send(to string, msg proto.Message) {
+func (b *Bus) Send(to string, msg proto.Message) {
 	defer func() {
 		if err := recover(); err != nil {
 			log.Errorf("Failed to send: %v\n", err)
 		}
 	}()
 	name := reflect.TypeOf(msg).Elem().Name()
-	mtype, ok := a.messageNameToMtype[name]
+	mtype, ok := b.messageNameToMtype[name]
 	if !ok {
 		log.Errorf("Failed to send: unknown message: %v\n", name)
 		return
 	}
-	a.sendQueue <- &Message{Mtype: mtype, Addr: to, Msg: msg}
+	b.sendQueue <- &Message{Mtype: mtype, Addr: to, Msg: msg}
 }
 
 // Trigger puts an event in the eventQueue.
-func (a *Actor) Trigger(event *Event) {
-	a.eventQueue <- event
+func (b *Bus) Trigger(event *Event) {
+	b.eventQueue <- event
 }
 
-// Shutdown shuts down the messenger. It will stop the underlying transporter first.
-func (a *Actor) Shutdown() {
-	a.tr.Shutdown()
-	close(a.stop)
+// Shutdown shuts down the bus. It will stop the underlying transporter first.
+func (b *Bus) Shutdown() {
+	b.tr.Shutdown()
+	close(b.stop)
 }
 
-// eventLoop runs forever until the actor is shutdown. It will try to
+// eventLoop runs forever until the bus is shutdown. It will try to
 // receive messages or events and dispatch them.
-func (a *Actor) eventLoop() {
+func (b *Bus) eventLoop() {
 	for {
 		select {
-		case <-a.stop:
+		case <-b.stop:
 			return
-		case msg := <-a.recvQueue:
-			a.dispatchMessage(msg)
-		case event := <-a.eventQueue:
-			a.dispatchEvent(event)
+		case msg := <-b.recvQueue:
+			b.dispatchMessage(msg)
+		case event := <-b.eventQueue:
+			b.dispatchEvent(event)
 		}
 	}
 }
 
 // dispatchMessage calls the installed handler to handle the message.
-func (a *Actor) dispatchMessage(msg *Message) {
-	a.messageHandler[msg.Mtype](msg.Addr, msg.Msg)
+func (b *Bus) dispatchMessage(msg *Message) {
+	b.messageHandler[msg.Mtype](msg.Addr, msg.Msg)
 }
 
 // dispatchEvent calls the installed handler to handle the event.
-func (a *Actor) dispatchEvent(event *Event) {
-	handler, ok := a.eventHandler[event.Etype]
+func (b *Bus) dispatchEvent(event *Event) {
+	handler, ok := b.eventHandler[event.Etype]
 	if !ok {
 		log.Warningf("Uninstalled event: %v\n", event.Etype)
 		return
@@ -177,55 +177,55 @@ func (a *Actor) dispatchEvent(event *Event) {
 	handler(event)
 }
 
-// encodeLoop runs forever until the messenger is shutdown.
-func (a *Actor) encodeLoop() {
+// encodeLoop runs forever until the bus is shutdown.
+func (b *Bus) encodeLoop() {
 	for {
 		select {
-		case <-a.stop:
+		case <-b.stop:
 			return
-		case msg := <-a.sendQueue:
-			if err := a.encode(msg); err != nil {
+		case msg := <-b.sendQueue:
+			if err := b.encode(msg); err != nil {
 				continue
 			}
-			a.tr.Send(msg)
+			b.tr.Send(msg)
 		}
 	}
 }
 
-// decodeLoop runs forever until the messenger is shutdown.
-func (a *Actor) decodeLoop() {
+// decodeLoop runs forever until the bus is shutdown.
+func (b *Bus) decodeLoop() {
 	for {
 		select {
-		case <-a.stop:
+		case <-b.stop:
 			return
 		default:
 		}
-		msg := a.tr.Recv()
-		if err := a.decode(msg); err != nil {
+		msg := b.tr.Recv()
+		if err := b.decode(msg); err != nil {
 			continue
 		}
-		a.recvQueue <- msg
+		b.recvQueue <- msg
 	}
 }
 
 // encode encodes the message into bytes and append the message's type
 // at the end of the payload. This is necessary because protobuf is not
 // self-explained.
-func (a *Actor) encode(msg *Message) error {
-	b, err := proto.Marshal(msg.Msg)
+func (b *Bus) encode(msg *Message) error {
+	bs, err := proto.Marshal(msg.Msg)
 	if err != nil {
 		log.Warningf("Failed to marshal message[%v]: %v\n", msg.Mtype, err)
 		return err
 	}
-	msg.Payload = append(b, byte(msg.Mtype))
+	msg.Payload = append(bs, byte(msg.Mtype))
 	return nil
 }
 
 // decode decodes the message from the bytes. It will get the type of the
 // message first, then use reflect to create a message, and do a proto.Unmarshal().
-func (a *Actor) decode(msg *Message) error {
+func (b *Bus) decode(msg *Message) error {
 	mtype := uint8(msg.Payload[len(msg.Payload)-1])
-	rtype, ok := a.messageType[mtype]
+	rtype, ok := b.messageType[mtype]
 	if !ok {
 		err := fmt.Errorf("Unknown message type: %v", mtype)
 		log.Warningf("Failed to unmarshal message[payload=%v]: %v\n", msg.Payload, err)

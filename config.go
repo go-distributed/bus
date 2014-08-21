@@ -16,13 +16,13 @@
  * limitations under the License.
  */
 
-package actor
+package bus
 
 import (
 	"fmt"
 )
 
-// Config is used to store configs for the actor components.
+// Config is used to store configs for the bus components.
 type Config struct {
 	Hostport     string
 	SendRoutines int
